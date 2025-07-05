@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>AI Career Planner</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron&family=Poppins&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: 'Poppins', sans-serif;
+    }
+
+    body {
+      margin: 0;
+      padding: 0;
+      background: linear-gradient(135deg, #ffe3e3, #cce5ff);
+      min-height: 100vh;
+      color: #333;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      padding: 40px 20px;
+    }
+
+    .glass-container {
+      max-width: 700px;
+      background: linear-gradient(135deg, #fdfbfb, #ebedee);
+      padding: 40px;
+      border-radius: 20px;
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.1);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+    }
+
+    h1 {
+      font-family: 'Orbitron', sans-serif;
+      text-align: center;
+      font-size: 2em;
+      margin-bottom: 30px;
+      color: #444;
+    }
+
+    label {
+      display: block;
+      margin-bottom: 10px;
+      color: #333;
+    }
+
+    input[type="number"], select {
+      width: 100%;
+      padding: 12px;
+      margin-bottom: 20px;
+      border-radius: 8px;
+      border: 1px solid #ccc;
+      font-size: 1rem;
+      background: #ffffff;
+      color: #333;
+    }
+
+    button[type="submit"] {
+      background: linear-gradient(to right, #ffd6e0, #b8e1ff);
+      color: #222;
+      padding: 12px 25px;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      font-weight: bold;
+      cursor: pointer;
+      transition: 0.3s;
+      width: 100%;
+    }
+
+    button[type="submit"]:hover {
+      transform: scale(1.03);
+      box-shadow: 0 4px 10px rgba(0,0,0,0.1);
+    }
+
+    .result {
+      margin-top: 30px;
+      background-color: #f3f3f3;
+      padding: 20px;
+      border-radius: 12px;
+      font-size: 1.1rem;
+      display: none;
+      animation: fadeIn 0.8s ease-in-out forwards;
+      color: #444;
+    }
+
+    .career-card {
+      background-color: #fff;
+      border: 1px solid #ddd;
+      border-radius: 10px;
+      padding: 15px;
+      margin-bottom: 15px;
+    }
+
+    @keyframes fadeIn {
+      0% { opacity: 0; transform: translateY(10px); }
+      100% { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="glass-container">
+    <h1>🌸 AI Career Planner</h1>
+    <form id="careerForm">
+
+      <label for="salary">Expected Salary (USD):</label>
+      <input type="number" id="salary" required placeholder="e.g. 95000" />
+
+      <label for="experience">Years of Experience:</label>
+      <input type="number" id="experience" required placeholder="e.g. 4" />
+
+      <label for="company">Company Size:</label>
+      <select id="company" required>
+        <option value="">Select</option>
+        <option value="S">Small</option>
+        <option value="M">Medium</option>
+        <option value="L">Large</option>
+      </select>
+
+      <label for="education">Education Level:</label>
+      <select id="education" required>
+        <option value="">Select</option>
+        <option value="Bachelor's Degree">Bachelor's Degree</option>
+        <option value="Master's Degree">Master's Degree</option>
+        <option value="PhD">PhD</option>
+      </select>
+
+      <button type="submit">✨ Predict My Career</button>
+    </form>
+
+    <div class="result" id="careerResult">
+      <h3>🔮 Top Career Suggestions:</h3>
+      <div id="careerCards"></div>
+
+      <div style="margin-top: 30px;">
+        <h4>🧠 What does "Confidence" mean?</h4>
+        <p>Confidence shows how strongly the AI recommends a career. The higher the value, the more aligned your profile is with the role.</p>
+
+        <h4>📈 Interpretation:</h4>
+        <ul>
+          <li><strong>90%+</strong>: Excellent Fit</li>
+          <li><strong>70–89%</strong>: Good Fit</li>
+          <li><strong>&lt;70%</strong>: Explore Carefully</li>
+        </ul>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const form = document.getElementById("careerForm");
+    const resultBox = document.getElementById("careerResult");
+    const cardsContainer = document.getElementById("careerCards");
+
+    form.addEventListener("submit", async function(e) {
+      e.preventDefault();
+
+      const salary = parseFloat(document.getElementById("salary").value);
+      const experience = parseFloat(document.getElementById("experience").value);
+      const companySize = document.getElementById("company").value;
+      const education = document.getElementById("education").value;
+
+      const payload = {
+        salary_usd: salary,
+        years_experience: experience,
+        company_size: companySize,
+        education_required: education
+      };
+
+      try {
+        const response = await fetch("http://127.0.0.1:5000/predict-career", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (!result.success) throw new Error(result.error);
+
+        cardsContainer.innerHTML = "";
+
+        result.predictions.forEach(pred => {
+          const card = document.createElement("div");
+          card.className = "career-card";
+          card.innerHTML = `
+            <h4>${pred.career}</h4>
+            <p><strong>Confidence:</strong> ${pred.confidence}%</p>
+            <p>${getConfidenceMeaning(pred.confidence)}</p>
+          `;
+          cardsContainer.appendChild(card);
+        });
+
+        resultBox.style.display = "block";
+      } catch (err) {
+        alert("Error: " + err.message);
+        console.error(err);
+      }
+    });
+
+    function getConfidenceMeaning(conf) {
+      if (conf >= 90) return "🌟 Excellent match for you!";
+      if (conf >= 70) return "✅ Good fit for your profile.";
+      return "⚠️ Worth exploring with caution.";
+    }
+  </script>
+
+</body>
+</html>
